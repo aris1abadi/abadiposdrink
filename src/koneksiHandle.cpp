@@ -19,16 +19,14 @@
 #define WIFI_SSID "Lele Bakar"
 #define WIFI_PASSWORD "@LesehanPundong#123"
 
-// #define MQTT_HOST         IPAddress(103,172,204,40)
-#define MQTT_HOST IPAddress(192, 168, 100, 119)
+#define MQTT_HOST         IPAddress(103,172,204,40)
+//#define MQTT_HOST IPAddress(192, 168, 100, 119)
 // #define MQTT_HOST         "abadinet.my.id"        // Broker address
 #define MQTT_PORT 2000
 
 const char *PubTopic = "dapur2-resp"; // Topic to publish
 
 const char *SubTopic = "dapur2-cmd";
-
-
 
 int antrianCount = 0;
 
@@ -44,6 +42,11 @@ extern int onProses[100];
 extern bool sedangProses;
 extern bool isBusy;
 extern int prosesCount;
+extern bool stepFinish;
+
+extern bool orderReady;
+extern int orderCount;
+String orderId[10];
 
 AsyncMqttClient mqttClient;
 
@@ -108,7 +111,7 @@ void onMqttConnect(bool sessionPresent)
   Serial.print("Subscribing at QoS 2, packetId: ");
   Serial.println(packetIdSub);
 
-  mqttClient.publish(PubTopic, 0, true, "Dapur2 siap");
+  mqttClient.publish(PubTopic, 1, true, "Dapur2 siap");
   Serial.println("Publishing at QoS 0");
 
   printSeparationLine();
@@ -157,7 +160,7 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
     */
   if (!sedangProses)
   {
-    DynamicJsonDocument antrianDapur2(1023); // ESP.getMaxAllocHeap()
+    DynamicJsonDocument antrianDapur2(1023); 
     DeserializationError error = deserializeJson(antrianDapur2, payload, len);
     if (error)
     {
@@ -167,6 +170,7 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
 
     antrianCount = 0;
     prosesCount = 0;
+    orderCount = 0;
     for (int i = 0; i < antrianDapur2.size(); i++)
     {
       String id_0 = antrianDapur2[i]["id"];
@@ -179,11 +183,7 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
 
         String item = antrianDapur2[i]["item"][a]["nama"];
         String itemId = antrianDapur2[i]["item"][a]["id"];
-        String jml = antrianDapur2[i]["item"][a]["jml"];
-        // Serial.print("item: ");
-        // Serial.print(item);
-        // Serial.print(" ");
-        // Serial.println(jml);
+        String jml = antrianDapur2[i]["item"][a]["jml"];        
 
         if (!antrianDapur2[i]["item"][a]["isReady"])
         {
@@ -215,9 +215,13 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
       Serial.println("======================================");
       // tanda antar order
       onProses[antrianCount] = '-';
+      orderId[orderCount] = id_0;
+      orderCount += 1;
       antrianCount += 1;
     }
     sedangProses = true;
+    stepFinish = true;
+    orderCount = 0;
     prosesBikinMinum();
   }
   else
@@ -279,11 +283,17 @@ int menuCount = 0;
     }
   }
 */
+void sendChange(String id){
+  mqttClient.publish(PubTopic, 1, true,id.c_str());
+}
 
 void cekProses()
 {
-  if (sedangProses)
+  if (orderReady)
   {
+    sendChange(orderId[orderCount]);
+    orderReady = false;
+    orderCount += 1;
   }
 }
 

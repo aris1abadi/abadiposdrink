@@ -33,14 +33,18 @@ int delayCount = 0;
 
 bool isBusy = true;
 bool stepFinish = false;
+bool orderReady = false;
+int orderCount = 0;
+//String orderId[10];
+
 int stepCount = 0;
 int stepDelay = 0;
 int jenisOrder = ES_TEH;
 
-int onProses[100];
+int onProses[50];
 
 bool sedangProses = false;
-int     prosesCount = 0;
+int prosesCount = 0;
 
 // prototype
 void pos0();
@@ -82,7 +86,7 @@ void servoInit()
     servo1.write(0);
     servo2.write(0);
 
-    //tasker.setInterval(loopServo, 20);
+    // tasker.setInterval(loopServo, 20);
 }
 
 void pompaInit()
@@ -91,7 +95,7 @@ void pompaInit()
     pinMode(POMPA_TEH, OUTPUT);
     pinMode(POMPA_ES, OUTPUT);
     pinMode(POMPA_JERUK, OUTPUT);
-    
+
     pinMode(POMPA_GULA, OUTPUT);
     pinMode(POMPA_AIR_PANAS, OUTPUT);
 
@@ -117,6 +121,7 @@ void finishPos()
 {
     isBusy = true;
     stepFinish = true;
+    Serial.println("1 order selesai");
 }
 
 void cekStep()
@@ -344,19 +349,25 @@ void prosesBikinMinum()
         {
             // nek order pelanggan
             Serial.print("Order pelanggan selanjutnya");
+            prosesCount += 1;
+
+            orderReady = true;
+            
         }
-        else
-        {
-            jenisOrder = onProses[prosesCount];
-            onProses[prosesCount] = 0;
-            stepCount = 0;
-            isBusy = false;
-        }
+        jenisOrder = onProses[prosesCount];
+        onProses[prosesCount] = 0;
+        stepCount = 0;
+        isBusy = false;
+
         if (prosesCount == antrianCount)
         {
             antrianCount = 0;
             prosesCount = 0;
             sedangProses = false;
+
+            orderReady = true;
+            //orderCount += 1;
+            Serial.println("Selesai proses,siap antrian selanjutnya");
         }
         else
         {
@@ -368,36 +379,40 @@ void prosesBikinMinum()
 void servoLoop()
 {
     tasker.loop();
-    if (lastPos1 != targetPos1)
+    if ((millis() - lastMillis) > 20)
     {
-        if (lastPos1 > targetPos1)
+        lastMillis = millis();
+        if (lastPos1 != targetPos1)
         {
-            lastPos1 -= 1;
+            if (lastPos1 > targetPos1)
+            {
+                lastPos1 -= 1;
+            }
+            else
+            {
+                lastPos1 += 1;
+            }
+            servo1.write(lastPos1);
         }
-        else
-        {
-            lastPos1 += 1;
-        }
-        servo1.write(lastPos1);
-    }
 
-    if (lastPos2 != targetPos2)
-    {
-        if (lastPos2 > targetPos2)
+        if (lastPos2 != targetPos2)
         {
-            lastPos2 -= 1;
+            if (lastPos2 > targetPos2)
+            {
+                lastPos2 -= 1;
+            }
+            else
+            {
+                lastPos2 += 1;
+            }
+            servo2.write(lastPos2);
         }
-        else
+        // cek step tiap 200ms
+        if (++stepDelay > 10)
         {
-            lastPos2 += 1;
+            stepDelay = 0;
+            cekStep();
+            prosesBikinMinum();
         }
-        servo2.write(lastPos2);
-    }
-    // cek step tiap 200ms
-    if (++stepDelay > 10)
-    {
-        stepDelay = 0;
-        cekStep();
-        prosesBikinMinum();
     }
 }
