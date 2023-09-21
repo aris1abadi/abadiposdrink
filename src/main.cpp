@@ -1,7 +1,8 @@
 
 #include <Arduino.h>
 // #include "serverHandle.h"
-#include "mainServoHandle.h"
+#include "mekanikHandle.h"
+#include <koneksiHandle.h>
 
 String serBuff = "";
 
@@ -19,31 +20,11 @@ void serialLoop()
 			{
 				int n_servo = (serBuff.charAt(0) - '0');
 				int pos = (serBuff.substring(2, 5)).toInt();
-				switch (n_servo)
-				{
-				case 0:
-					setPos(1, 0);
-					setPos(2, 0);
-					break;
-				case 1:
-					setPos(1, 45);
-					setPos(2, 45);
-					break;
-				case 2:
-					setPos(1, 90);
-					setPos(2, 90);
-					break;
-				case 3:
-					setPos(1, 135);
-					setPos(2, 135);
-					break;
-				case 4:
-					setPos(1, 180);
-					setPos(2, 180);
-					break;
-				case 5:
-					isReady = true;
-					break;
+				
+				if(n_servo < 5){
+					bikinMinum(n_servo);
+				}else{
+					Serial.println("tekan 1-4");
 				}
 
 				Serial.print(serBuff);
@@ -70,9 +51,14 @@ void setup()
 	// init_socket();
 	Serial.print("Mesin siap");
 	servoInit();
-	delay(5000);
+	pompaInit();
+	delay(1000);
 	setPos(1, 0);
 	setPos(2, 0);
+
+	mqttInit();
+
+	//socketInit();
 }
 
 void loop()
@@ -80,10 +66,7 @@ void loop()
 	// put your main code here, to run repeatedly:
 	// socketIOLoop();
 	servoLoop();
+	mqttLoop();
 	serialLoop();
-	if (isReady)
-	{
-		isReady = false;
-		bikinEsTeh();
-	}
+	
 }
