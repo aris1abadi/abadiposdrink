@@ -246,7 +246,7 @@ void cekProses()
     }
     else
     {
-      sendChange("nextOrder", "selesai");
+      sendChange("nextOrder", orderId[orderCount]);
       orderReady = false;
     }
   }
