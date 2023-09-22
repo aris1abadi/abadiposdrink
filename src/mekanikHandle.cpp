@@ -35,7 +35,7 @@ bool isBusy = true;
 bool stepFinish = false;
 bool orderReady = false;
 int orderCount = 0;
-//String orderId[10];
+// String orderId[10];
 
 int stepCount = 0;
 int stepDelay = 0;
@@ -343,35 +343,33 @@ void prosesBikinMinum()
 {
     if ((stepFinish) && (sedangProses))
     {
-        stepFinish = false;
+        
         // next order
-        if (onProses[prosesCount] == '-')
+        if (onProses[prosesCount] == '+')
         {
             // nek order pelanggan
-            Serial.print("Order pelanggan selanjutnya");
+            Serial.println("Order pelanggan selanjutnya");
             prosesCount += 1;
 
             orderReady = true;
-            
         }
-        jenisOrder = onProses[prosesCount];
-        onProses[prosesCount] = 0;
-        stepCount = 0;
-        isBusy = false;
-
-        if (prosesCount == antrianCount)
+        else if (onProses[prosesCount] == '-')
         {
+            // proses selesai
             antrianCount = 0;
             prosesCount = 0;
             sedangProses = false;
-
             orderReady = true;
-            //orderCount += 1;
-            Serial.println("Selesai proses,siap antrian selanjutnya");
+            stepFinish = false;
+            Serial.println("Order Selesai");
         }
         else
         {
+            jenisOrder = onProses[prosesCount];            
+            stepCount = 0;
+            isBusy = false;
             prosesCount += 1;
+            stepFinish = false;
         }
     }
 }

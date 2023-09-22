@@ -11,17 +11,17 @@
 #include "mekanikHandle.h"
 
 // kode id pada kategori minum
-#define ID_ESTEH      "M07"
-#define ID_ESJERUK    "M08"
-#define ID_TEHPANAS    "M09"
-#define ID_JERUKPANAS   "M10"
+#define ID_ESTEH "M07"
+#define ID_ESJERUK "M08"
+#define ID_TEHPANAS "M09"
+#define ID_JERUKPANAS "M10"
 
 #define WIFI_SSID "Lele Bakar"
 #define WIFI_PASSWORD "@LesehanPundong#123"
 
-#define MQTT_HOST         IPAddress(103,172,204,40)
-//#define MQTT_HOST IPAddress(192, 168, 100, 119)
-// #define MQTT_HOST         "abadinet.my.id"        // Broker address
+#define MQTT_HOST IPAddress(103, 172, 204, 40)
+// #define MQTT_HOST IPAddress(192, 168, 100, 119)
+//  #define MQTT_HOST         "abadinet.my.id"        // Broker address
 #define MQTT_PORT 2000
 
 const char *PubTopic = "dapur2-resp"; // Topic to publish
@@ -60,7 +60,6 @@ void connectToMqtt()
 {
   Serial.println("Connecting to MQTT...");
   mqttClient.connect();
-  
 }
 
 void WiFiEvent(WiFiEvent_t event)
@@ -70,58 +69,37 @@ void WiFiEvent(WiFiEvent_t event)
 
   case SYSTEM_EVENT_STA_GOT_IP:
     Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+    // Serial.println("IP address: ");
+    // Serial.println(WiFi.localIP());
     connectToMqtt();
     break;
 
   case SYSTEM_EVENT_STA_DISCONNECTED:
-    Serial.println("WiFi lost connection");
+    Serial.println("WiFi Putus");
     mqttReconect = false;
     wifiReconect = true;
     // xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
     // xTimerStart(wifiReconnectTimer, 0);
     break;
 
-
   default:
     break;
   }
 }
 
-void printSeparationLine()
-{
-  Serial.println("************************************************");
-}
-
 void onMqttConnect(bool sessionPresent)
 {
-  Serial.print("Connected to MQTT broker: ");
-  Serial.print(MQTT_HOST);
-  Serial.print(", port: ");
-  Serial.println(MQTT_PORT);
-  Serial.print("PubTopic: ");
-  Serial.println(PubTopic);
-
-  printSeparationLine();
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
+  Serial.println("Terhubung ke Server pos ");
 
   uint16_t packetIdSub = mqttClient.subscribe(SubTopic, 1);
-  Serial.print("Subscribing at QoS 2, packetId: ");
-  Serial.println(packetIdSub);
-
   mqttClient.publish(PubTopic, 1, true, "Dapur2 siap");
-  Serial.println("Publishing at QoS 0");
-
-  printSeparationLine();
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
   (void)reason;
 
-  Serial.println("Disconnected from MQTT.");
+  Serial.println("Putus dari Server.");
 
   if (WiFi.isConnected())
   {
@@ -160,7 +138,7 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
     */
   if (!sedangProses)
   {
-    DynamicJsonDocument antrianDapur2(1023); 
+    DynamicJsonDocument antrianDapur2(1023);
     DeserializationError error = deserializeJson(antrianDapur2, payload, len);
     if (error)
     {
@@ -171,19 +149,22 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
     antrianCount = 0;
     prosesCount = 0;
     orderCount = 0;
+    // for(int i = 0;i < 100;i++){
+    //  onProses[i] = 0;
+    //}
+
     for (int i = 0; i < antrianDapur2.size(); i++)
     {
       String id_0 = antrianDapur2[i]["id"];
-      Serial.print("Id: ");
-      Serial.println(id_0);
-      Serial.println("------------------------------------");
+      // Serial.print("Id: ");
+      // Serial.println(id_0);
 
       for (int a = 0; a < antrianDapur2[i]["item"].size(); a++)
       {
 
         String item = antrianDapur2[i]["item"][a]["nama"];
         String itemId = antrianDapur2[i]["item"][a]["id"];
-        String jml = antrianDapur2[i]["item"][a]["jml"];        
+        String jml = antrianDapur2[i]["item"][a]["jml"];
 
         if (!antrianDapur2[i]["item"][a]["isReady"])
         {
@@ -212,88 +193,62 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
           }
         }
       }
-      Serial.println("======================================");
+
       // tanda antar order
-      onProses[antrianCount] = '-';
-      orderId[orderCount] = id_0;
-      orderCount += 1;
-      antrianCount += 1;
+      if (antrianCount > 0)
+      {
+        onProses[antrianCount] = '+';
+        orderId[orderCount] = id_0;
+        orderCount += 1;
+        antrianCount += 1;
+      }
     }
-    sedangProses = true;
-    stepFinish = true;
-    orderCount = 0;
-    prosesBikinMinum();
+    if (antrianCount > 0)
+    {
+      Serial.println("---------Pelanggan order----------");
+      for (int i = 0; i < orderCount; i++)
+      {
+        Serial.print((orderCount + 1));
+        Serial.print(". ");
+        Serial.println(orderId[i]);
+      }
+      Serial.println("----------------------------------");
+      onProses[antrianCount] = '-';
+      sedangProses = true;
+      stepFinish = true;
+      orderCount = 0;
+      prosesBikinMinum();
+    }
   }
   else
   {
-    Serial.println("Sedang proses Bikin Minum!!! data belum bisa diterima");
+    Serial.println("Sedang proses (antrian baru dalam antrian)");
   }
 }
-/*
 
-int menuCount = 0;
-    for (int i = 0; i < antrianDapur2.size(); i++)
-    {
-      String id_0 = antrianDapur2[i]["id"];
-      Serial.print("Id: ");
-      Serial.println(id_0);
-      Serial.println("------------------------------------");
-
-      for (int a = 0; a < antrianDapur2[i]["item"].size(); a++)
-      {
-
-        String item = antrianDapur2[i]["item"][a]["nama"];
-        String itemId = antrianDapur2[i]["item"][a]["id"];
-        String jml = antrianDapur2[i]["item"][a]["jml"];
-        // Serial.print("item: ");
-        // Serial.print(item);
-        // Serial.print(" ");
-        // Serial.println(jml);
-
-        if (!antrianDapur2[i]["item"][a]["isReady"])
-        {
-          int orderNow = 0;
-          if (itemId == ID_ESTEH)
-          {
-            orderNow = ES_TEH;
-          }
-          else if (itemId == ID_ESJERUK)
-          {
-            orderNow = ES_JERUK;
-          }
-          else if (itemId == ID_JERUKPANAS)
-          {
-            orderNow = JERUK_PANAS;
-          }
-          else if (itemId == ID_TEHPANAS)
-          {
-            orderNow = TEH_PANAS;
-          }
-          int c = jml.toInt();
-          for (int i = 0; i < c;)
-          {
-              //bikinMinum(orderNow);
-              Serial.print("Sedang bikin ");
-              Serial.println(orderNow);
-              i += 1;
-          }
-        }
-      }
-      Serial.println("======================================");
-    }
-  }
-*/
-void sendChange(String id){
-  mqttClient.publish(PubTopic, 1, true,id.c_str());
+void sendChange(String type, String content)
+{
+  String msg = type;
+  msg += ';';
+  msg += content;
+  mqttClient.publish(PubTopic, 1, true, msg.c_str());
 }
 
 void cekProses()
 {
   if (orderReady)
   {
-    sendChange(orderId[orderCount]);
-    orderReady = false;
-    orderCount += 1;
+    if (sedangProses)
+    {
+      sendChange("nextProses", orderId[orderCount]);
+      orderReady = false;
+      orderCount += 1;
+    }
+    else
+    {
+      sendChange("nextOrder", "selesai");
+      orderReady = false;
+    }
   }
 }
 
@@ -315,12 +270,11 @@ void mqttInit()
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onSubscribe(onMqttSubscribe);
-  mqttClient.onUnsubscribe(onMqttUnsubscribe);
+  // mqttClient.onSubscribe(onMqttSubscribe);
+  // mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
-  mqttClient.onPublish(onMqttPublish);
+  // mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
- 
 
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
