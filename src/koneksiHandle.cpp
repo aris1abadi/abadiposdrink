@@ -19,8 +19,12 @@
 #define WIFI_SSID "Lele Bakar"
 #define WIFI_PASSWORD "@LesehanPundong#123"
 
+//#define WIFI_SSID "Lesehan Pundong"
+//#define WIFI_PASSWORD "LesehanPundong123"
+
 #define MQTT_HOST IPAddress(103, 172, 204, 40)
-// #define MQTT_HOST IPAddress(192, 168, 100, 119)
+//#define MQTT_HOST IPAddress(192, 168, 100, 119)
+ //#define MQTT_HOST IPAddress(192,168,123,114)
 //  #define MQTT_HOST         "abadinet.my.id"        // Broker address
 #define MQTT_PORT 2000
 
@@ -38,7 +42,7 @@ int wifiReconectCount = 0;
 
 unsigned long timeDelay = millis();
 
-extern int onProses[100];
+extern int onProses[50];
 extern bool sedangProses;
 extern bool isBusy;
 extern int prosesCount;
@@ -46,19 +50,20 @@ extern bool stepFinish;
 
 extern bool orderReady;
 extern int orderCount;
+extern bool prosesFinish;
 String orderId[10];
 
 AsyncMqttClient mqttClient;
 
 void connectToWifi()
 {
-  Serial.println("Connecting to Wi-Fi...");
+  Serial.println("Cari Jaringan Wifi...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void connectToMqtt()
 {
-  Serial.println("Connecting to MQTT...");
+  Serial.println("Menyambung ke Server pos...");
   mqttClient.connect();
 }
 
@@ -68,7 +73,7 @@ void WiFiEvent(WiFiEvent_t event)
   {
 
   case SYSTEM_EVENT_STA_GOT_IP:
-    Serial.println("WiFi connected");
+    Serial.println("Tersambung ke Jaringan Wifi");
     // Serial.println("IP address: ");
     // Serial.println(WiFi.localIP());
     connectToMqtt();
@@ -99,7 +104,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
   (void)reason;
 
-  Serial.println("Putus dari Server.");
+  Serial.println("Putus dari Server POS.");
 
   if (WiFi.isConnected())
   {
@@ -132,10 +137,10 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
     Serial.print("  topic: ");
     Serial.println(topic);
     Serial.print("  qos: ");
-
-    Serial.print("payload: ");
-    Serial.println(payload);
-    */
+*/
+ //   Serial.print("payload: ");
+ //   Serial.println(payload);
+   
   if (!sedangProses)
   {
     DynamicJsonDocument antrianDapur2(1023);
@@ -156,8 +161,7 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
     for (int i = 0; i < antrianDapur2.size(); i++)
     {
       String id_0 = antrianDapur2[i]["id"];
-      // Serial.print("Id: ");
-      // Serial.println(id_0);
+      
 
       for (int a = 0; a < antrianDapur2[i]["item"].size(); a++)
       {
@@ -208,7 +212,7 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
       Serial.println("---------Pelanggan order----------");
       for (int i = 0; i < orderCount; i++)
       {
-        Serial.print((orderCount + 1));
+        Serial.print((i + 1));
         Serial.print(". ");
         Serial.println(orderId[i]);
       }
@@ -226,12 +230,9 @@ void onMqttMessage(char *topic, char *payload, const AsyncMqttClientMessagePrope
   }
 }
 
-void sendChange(String type, String content)
+void sendChange(String content)
 {
-  String msg = type;
-  msg += ';';
-  msg += content;
-  mqttClient.publish(PubTopic, 1, true, msg.c_str());
+  mqttClient.publish(PubTopic, 1, true, content.c_str());
 }
 
 void cekProses()
@@ -240,15 +241,19 @@ void cekProses()
   {
     if (sedangProses)
     {
-      sendChange("nextProses", orderId[orderCount]);
+
+      sendChange(orderId[orderCount]);
+      prosesFinish = false;
+      sedangProses = false;
+
       orderReady = false;
       orderCount += 1;
     }
-    else
-    {
-      sendChange("nextOrder", orderId[orderCount]);
-      orderReady = false;
-    }
+    // if(prosesFinish){
+    //   sendChange("nextOrder", orderId[orderCount]);
+    //   orderReady = false;
+    //   prosesFinish = false;
+    // }
   }
 }
 

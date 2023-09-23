@@ -44,6 +44,7 @@ int jenisOrder = ES_TEH;
 int onProses[50];
 
 bool sedangProses = false;
+bool prosesFinish = false;
 int prosesCount = 0;
 
 // prototype
@@ -339,6 +340,12 @@ void bikinEsTeh()
     isBusy = false;
 }
 
+void resetOnProses(){
+    for(int i;i<50;i++){
+        onProses[i] = '-';
+    }
+}
+
 void prosesBikinMinum()
 {
     if ((stepFinish) && (sedangProses))
@@ -348,20 +355,22 @@ void prosesBikinMinum()
         if (onProses[prosesCount] == '+')
         {
             // nek order pelanggan
-            Serial.println("Order pelanggan selanjutnya");
+            Serial.println("Order Selesai");
             prosesCount += 1;
-
             orderReady = true;
         }
         else if (onProses[prosesCount] == '-')
         {
             // proses selesai
+
             antrianCount = 0;
             prosesCount = 0;
-            sedangProses = false;
+            sedangProses = true;
             orderReady = true;
             stepFinish = false;
-            Serial.println("Order Selesai");
+            prosesFinish = true;
+            //resetOnProses();
+            Serial.println("Tunggu order baru");
         }
         else
         {
